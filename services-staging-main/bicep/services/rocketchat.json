@@ -1,0 +1,50 @@
+{
+  "service": "rocketchat",
+  "description": "Rocket.Chat — Team Communication",
+
+  "helm": {
+    "repoName": "rocketchat",
+    "repoUrl": "https://rocketchat.github.io/helm-charts",
+    "chartName": "rocketchat",
+    "chartRef": "rocketchat/rocketchat",
+    "chartVersion": "6.32.1",
+    "releaseName": "rocketchat",
+    "namespace": "rocketchat",
+    "source": "oci"
+  },
+
+  "istioRevision": "asm-1-27",
+
+  "questions": [
+    { "var": "ENABLE_MICROSERVICES", "prompt": "Enable microservices mode (for large scale)?", "default": "no" },
+    { "var": "ENABLE_FEDERATION", "prompt": "Enable Matrix federation?", "default": "no" }
+  ],
+
+  "secrets": [
+    { "envVar": "MONGO_PASSWORD", "prompt": "MongoDB password", "generate": "prompt", "condition": "always" },
+    { "envVar": "ROCKETCHAT_ADMIN_PASSWORD", "prompt": "Rocket.Chat admin password", "generate": "prompt", "condition": "always" }
+  ],
+
+  "k8sSecrets": [
+    {
+      "name": "rocketchat-mongo-secret",
+      "data": {
+        "mongo-uri": "mongodb://rocketchat:${MONGO_PASSWORD}@mongodb-0.mongodb-svc.rocketchat.svc.cluster.local:27017/rocketchat?authSource=rocketchat&replicaSet=rs0"
+      }
+    },
+    {
+      "name": "rocketchat-admin-secret",
+      "data": {
+        "password": "${ROCKETCHAT_ADMIN_PASSWORD}"
+      }
+    }
+  ],
+
+  "externalNameServices": [],
+
+  "argocd": {
+    "project": "services",
+    "syncPolicy": "automated",
+    "namespace": "argocd"
+  }
+}

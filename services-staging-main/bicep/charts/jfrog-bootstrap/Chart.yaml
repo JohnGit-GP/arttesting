@@ -1,0 +1,9 @@
+apiVersion: v2
+name: jfrog-bootstrap
+description: |
+  PostgreSQL bootstrap (users, grants, extensions) for the JFrog Platform
+  on Azure PG Flexible Server. Runs as a Helm pre-install/pre-upgrade hook
+  Job — no main chart resources. Idempotent.
+type: application
+version: 0.1.0
+appVersion: "1.0"

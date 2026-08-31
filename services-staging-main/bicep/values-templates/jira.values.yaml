@@ -1,0 +1,57 @@
+# Jira Data Center — Azure Gov Cloud Values
+
+image:
+  repository: ${ACR_LOGIN_SERVER}/atlassian/jira-software
+  tag: "11.3.3"
+
+volumes:
+  sharedHome:
+    nfsPermissionFixer:
+      imageRepo: ${ACR_LOGIN_SERVER}/library/alpine
+      imageTag: "3.19"
+    persistentVolumeClaim:
+      create: true
+      storageClassName: azurefile-csi-premium
+      resources:
+        requests:
+          storage: 10Gi
+  localHome:
+    persistentVolumeClaim:
+      create: true
+      storageClassName: managed-csi-premium
+      resources:
+        requests:
+          storage: 10Gi
+
+# External PostgreSQL
+database:
+  type: postgres72
+  url: "jdbc:postgresql://${PG_SERVER_FQDN}:5432/jira?ssl=true&sslmode=require"
+  driver: org.postgresql.Driver
+  credentials:
+    secretName: jira-db-secret
+    usernameSecretKey: username
+    passwordSecretKey: password
+
+# Disable built-in ingress — using Istio
+ingress:
+  create: false
+
+# Istio compatibility — exclude EHCache clustering ports
+podAnnotations:
+  traffic.sidecar.istio.io/excludeInboundPorts: "40001,40011"
+  traffic.sidecar.istio.io/excludeOutboundPorts: "40001,40011,5432"
+
+# Clustering (disabled by default for dev)
+jira:
+  clustering:
+    enabled: false
+  resources:
+    container:
+      requests:
+        cpu: "2"
+        memory: "2G"
+    jvm:
+      minHeap: "384m"
+      maxHeap: "1g"
+      reservedCodeCacheSize: "512m"

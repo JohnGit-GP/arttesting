@@ -1,0 +1,170 @@
+# GitLab — Azure Gov Cloud Values
+# Placeholders filled by envsubst at deploy time
+
+# ── Global ──
+global:
+  gitlabVersion: "18.11.0"
+  edition: ee
+  hosts:
+    domain: ${GITLAB_DOMAIN}
+
+  # ── External PostgreSQL ──
+  psql:
+    host: ${PG_SERVER_FQDN}
+    port: 5432
+    database: gitlabhq_production
+    username: gitlab
+    password:
+      secret: gitlab-postgresql-password
+      key: postgres-password
+
+  # ── External Redis (Azure Cache for Redis, TLS) ──
+  redis:
+    host: ${REDIS_HOST}
+    port: 6380
+    scheme: rediss
+    auth:
+      enabled: true
+      secret: gitlab-redis-secret
+      key: redis-password
+
+  # ── External Object Storage (Azure Blob, Gov Cloud) ──
+  minio:
+    enabled: false
+
+  appConfig:
+    object_store:
+      enabled: true
+      proxy_download: true
+      connection:
+        secret: gitlab-rails-storage
+        key: connection
+    artifacts:
+      bucket: gitlab-artifacts
+    lfs:
+      bucket: git-lfs
+    uploads:
+      bucket: gitlab-uploads
+    packages:
+      bucket: gitlab-packages
+    externalDiffs:
+      enabled: true
+      bucket: gitlab-mr-diffs
+    terraformState:
+      enabled: true
+      bucket: gitlab-terraform-state
+    ciSecureFiles:
+      enabled: true
+      bucket: gitlab-ci-secure-files
+    dependencyProxy:
+      enabled: true
+      bucket: gitlab-dependency-proxy
+    backups:
+      bucket: gitlab-backups
+      tmpBucket: gitlab-backups-tmp
+
+  # ── KAS ──
+  kas:
+    enabled: true
+
+  # ── Pages (disabled by default) ──
+  pages:
+    enabled: false
+
+  # ── Ingress (disabled — using Istio) ──
+  ingress:
+    enabled: false
+    configureCertmanager: false
+
+  # ── Init images (ACR overrides) ──
+  certificates:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/certificates
+  kubectl:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/kubectl
+  gitlabBase:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-base
+
+# ── Disable bundled infrastructure ──
+postgresql:
+  install: false
+
+redis:
+  install: false
+
+nginx-ingress:
+  enabled: false
+
+installCertmanager: false
+certmanager:
+  install: false
+
+prometheus:
+  install: false
+
+gitlab-runner:
+  install: false
+
+traefik:
+  install: false
+
+haproxy:
+  install: false
+
+gitlab-zoekt:
+  install: false
+
+# ── GitLab component images (ACR overrides) ──
+gitlab:
+  webservice:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-webservice-ee
+      tag: "18.11.0"
+  sidekiq:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-sidekiq-ee
+      tag: "18.11.0"
+  gitaly:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitaly
+      tag: "18.11.0"
+  gitlab-shell:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-shell
+      tag: "18.11.0"
+  kas:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-kas
+      tag: "18.11.0"
+  migrations:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-toolbox-ee
+      tag: "18.11.0"
+  toolbox:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-toolbox-ee
+      tag: "18.11.0"
+  mailroom:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-mailroom
+      tag: "18.11.0"
+  gitlab-exporter:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-exporter
+      tag: "18.11.0"
+
+# ── Container Registry ──
+registry:
+  enabled: true
+  image:
+    repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-container-registry
+    tag: "v4.39.0-gitlab"
+
+# ── Workhorse ──
+gitlab:
+  workhorse:
+    image:
+      repository: ${ACR_LOGIN_SERVER}/gitlab-org/build/cng/gitlab-workhorse-ee
+      tag: "18.11.0"

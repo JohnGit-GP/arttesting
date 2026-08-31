@@ -1,0 +1,253 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "16796211610081813447"
+    }
+  },
+  "parameters": {
+    "serviceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name prefix (ignored if existingName provided)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS"
+      ],
+      "metadata": {
+        "description": "Storage SKU"
+      }
+    },
+    "accessTier": {
+      "type": "string",
+      "defaultValue": "Hot",
+      "allowedValues": [
+        "Hot",
+        "Cool"
+      ],
+      "metadata": {
+        "description": "Access tier for the account"
+      }
+    },
+    "blobContainers": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Blob container names to create"
+      }
+    },
+    "disablePublicNetworkAccess": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Disable public network access (recommended when fronted by a private endpoint)"
+      }
+    },
+    "networkAclsDefaultAction": {
+      "type": "string",
+      "defaultValue": "Deny",
+      "allowedValues": [
+        "Allow",
+        "Deny"
+      ],
+      "metadata": {
+        "description": "Default action for network ACLs when public access is enabled"
+      }
+    },
+    "allowedIpRules": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Public IP allow-list when public access is enabled"
+      }
+    },
+    "allowedVirtualNetworkRules": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Virtual network rules when public access is enabled. Each item: { id, action }"
+      }
+    },
+    "allowSharedKeyAccess": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Allow shared key (account key) access. Set false to force Entra-only auth."
+      }
+    },
+    "blobDeleteRetentionDays": {
+      "type": "int",
+      "defaultValue": 7,
+      "minValue": 0,
+      "maxValue": 365,
+      "metadata": {
+        "description": "Blob soft-delete retention in days (0 disables)"
+      }
+    },
+    "containerDeleteRetentionDays": {
+      "type": "int",
+      "defaultValue": 7,
+      "minValue": 0,
+      "maxValue": 365,
+      "metadata": {
+        "description": "Container soft-delete retention in days (0 disables)"
+      }
+    },
+    "enableVersioning": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable blob versioning"
+      }
+    },
+    "existingName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of an existing Storage Account to use (empty = create new)"
+      }
+    },
+    "updateExistingConfig": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "When reusing an existing account, also push blob service config (versioning, soft-delete) to it. Default false to avoid clobbering ops-managed state."
+      }
+    }
+  },
+  "variables": {
+    "createNew": "[empty(parameters('existingName'))]",
+    "storageAccountName": "[if(variables('createNew'), take(toLower(format('st{0}{1}', replace(parameters('serviceName'), '-', ''), uniqueString(resourceGroup().id))), 24), parameters('existingName'))]"
+  },
+  "resources": [
+    {
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "[parameters('skuName')]"
+      },
+      "properties": {
+        "accessTier": "[parameters('accessTier')]",
+        "supportsHttpsTrafficOnly": true,
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": "[parameters('allowSharedKeyAccess')]",
+        "minimumTlsVersion": "TLS1_2",
+        "publicNetworkAccess": "[if(parameters('disablePublicNetworkAccess'), 'Disabled', 'Enabled')]",
+        "networkAcls": {
+          "copy": [
+            {
+              "name": "ipRules",
+              "count": "[length(parameters('allowedIpRules'))]",
+              "input": {
+                "value": "[parameters('allowedIpRules')[copyIndex('ipRules')]]",
+                "action": "Allow"
+              }
+            }
+          ],
+          "defaultAction": "[if(parameters('disablePublicNetworkAccess'), 'Deny', parameters('networkAclsDefaultAction'))]",
+          "bypass": "AzureServices",
+          "virtualNetworkRules": "[parameters('allowedVirtualNetworkRules')]"
+        }
+      }
+    },
+    {
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+      "properties": {
+        "isVersioningEnabled": "[parameters('enableVersioning')]",
+        "deleteRetentionPolicy": "[if(greater(parameters('blobDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('blobDeleteRetentionDays'))), createObject('enabled', false()))]",
+        "containerDeleteRetentionPolicy": "[if(greater(parameters('containerDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('containerDeleteRetentionDays'))), createObject('enabled', false()))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "condition": "[and(not(variables('createNew')), parameters('updateExistingConfig'))]",
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('existingName'), 'default')]",
+      "properties": {
+        "isVersioningEnabled": "[parameters('enableVersioning')]",
+        "deleteRetentionPolicy": "[if(greater(parameters('blobDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('blobDeleteRetentionDays'))), createObject('enabled', false()))]",
+        "containerDeleteRetentionPolicy": "[if(greater(parameters('containerDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('containerDeleteRetentionDays'))), createObject('enabled', false()))]"
+      }
+    },
+    {
+      "copy": {
+        "name": "containersNew",
+        "count": "[length(parameters('blobContainers'))]"
+      },
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', parameters('blobContainers')[copyIndex()])]",
+      "properties": {
+        "publicAccess": "None"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "containersExisting",
+        "count": "[length(parameters('blobContainers'))]"
+      },
+      "condition": "[not(variables('createNew'))]",
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('existingName'), 'default', parameters('blobContainers')[copyIndex()])]",
+      "properties": {
+        "publicAccess": "None"
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]"
+    },
+    "storageAccountId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+    },
+    "blobEndpoint": {
+      "type": "string",
+      "value": "[format('https://{0}.blob.{1}', variables('storageAccountName'), environment().suffixes.storage)]"
+    },
+    "blobEndpointSuffix": {
+      "type": "string",
+      "value": "[environment().suffixes.storage]"
+    }
+  }
+}

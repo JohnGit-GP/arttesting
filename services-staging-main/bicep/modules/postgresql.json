@@ -1,0 +1,340 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "6910303685710627976"
+    }
+  },
+  "parameters": {
+    "serviceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name prefix (ignored if existingName provided)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "adminUser": {
+      "type": "string",
+      "defaultValue": "pgadmin",
+      "metadata": {
+        "description": "Administrator username"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Administrator password (required when creating a new server; may be any non-empty value when reusing existing)"
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "metadata": {
+        "description": "SKU name (e.g., Standard_B1ms, Standard_D4ds_v5)"
+      }
+    },
+    "skuTier": {
+      "type": "string",
+      "defaultValue": "Burstable",
+      "allowedValues": [
+        "Burstable",
+        "GeneralPurpose",
+        "MemoryOptimized"
+      ],
+      "metadata": {
+        "description": "SKU tier"
+      }
+    },
+    "storageSizeGB": {
+      "type": "int",
+      "defaultValue": 32,
+      "metadata": {
+        "description": "Storage size in GB"
+      }
+    },
+    "version": {
+      "type": "string",
+      "defaultValue": "16",
+      "allowedValues": [
+        "15",
+        "16",
+        "17"
+      ],
+      "metadata": {
+        "description": "PostgreSQL version"
+      }
+    },
+    "highAvailability": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Disabled",
+        "ZoneRedundant"
+      ],
+      "metadata": {
+        "description": "High availability mode"
+      }
+    },
+    "databaseNames": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Database names to create"
+      }
+    },
+    "extensions": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "PostgreSQL extensions to enable (comma-separated). NOTE: overwrites azure.extensions on existing servers."
+      }
+    },
+    "networkAccess": {
+      "type": "string",
+      "defaultValue": "public",
+      "allowedValues": [
+        "public",
+        "private"
+      ],
+      "metadata": {
+        "description": "Network access mode. \"private\" requires delegatedSubnetResourceId + privateDnsZoneArmResourceId."
+      }
+    },
+    "delegatedSubnetResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Delegated subnet resource ID for private mode (required when networkAccess=private)"
+      }
+    },
+    "privateDnsZoneArmResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Private DNS zone resource ID for private mode (required when networkAccess=private)"
+      }
+    },
+    "allowAzureServices": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "When public, add a firewall rule allowing Azure services (0.0.0.0)"
+      }
+    },
+    "firewallAllowList": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Public firewall IP allow-list entries (ignored when private). Each item: { name, startIpAddress, endIpAddress }"
+      }
+    },
+    "backupRetentionDays": {
+      "type": "int",
+      "defaultValue": 7,
+      "minValue": 7,
+      "maxValue": 35,
+      "metadata": {
+        "description": "Backup retention in days (7-35)"
+      }
+    },
+    "geoRedundantBackup": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable geo-redundant backup"
+      }
+    },
+    "existingName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of an existing PostgreSQL server to use (empty = create new)"
+      }
+    },
+    "updateExistingConfig": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "When reusing an existing server, also push config (extensions) to it. Default false to avoid clobbering ops-managed state."
+      }
+    }
+  },
+  "variables": {
+    "createNew": "[empty(parameters('existingName'))]",
+    "isPrivate": "[equals(parameters('networkAccess'), 'private')]",
+    "generatedPgName": "[format('pg-{0}-{1}', parameters('serviceName'), uniqueString(resourceGroup().id))]",
+    "pgName": "[if(variables('createNew'), variables('generatedPgName'), parameters('existingName'))]",
+    "publicNetworkBlock": {
+      "publicNetworkAccess": "Enabled"
+    },
+    "privateNetworkBlock": {
+      "publicNetworkAccess": "Disabled",
+      "delegatedSubnetResourceId": "[parameters('delegatedSubnetResourceId')]",
+      "privateDnsZoneArmResourceId": "[parameters('privateDnsZoneArmResourceId')]"
+    }
+  },
+  "resources": [
+    {
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[variables('generatedPgName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "[parameters('skuName')]",
+        "tier": "[parameters('skuTier')]"
+      },
+      "properties": {
+        "version": "[parameters('version')]",
+        "administratorLogin": "[parameters('adminUser')]",
+        "administratorLoginPassword": "[parameters('adminPassword')]",
+        "storage": {
+          "storageSizeGB": "[parameters('storageSizeGB')]"
+        },
+        "highAvailability": {
+          "mode": "[parameters('highAvailability')]"
+        },
+        "backup": {
+          "backupRetentionDays": "[parameters('backupRetentionDays')]",
+          "geoRedundantBackup": "[if(parameters('geoRedundantBackup'), 'Enabled', 'Disabled')]"
+        },
+        "network": "[if(variables('isPrivate'), variables('privateNetworkBlock'), variables('publicNetworkBlock'))]"
+      }
+    },
+    {
+      "condition": "[and(and(variables('createNew'), not(variables('isPrivate'))), parameters('allowAzureServices'))]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('generatedPgName'), 'AllowAllAzureServices')]",
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "fwAllowList",
+        "count": "[length(parameters('firewallAllowList'))]"
+      },
+      "condition": "[and(variables('createNew'), not(variables('isPrivate')))]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('generatedPgName'), parameters('firewallAllowList')[copyIndex()].name)]",
+      "properties": {
+        "startIpAddress": "[parameters('firewallAllowList')[copyIndex()].startIpAddress]",
+        "endIpAddress": "[parameters('firewallAllowList')[copyIndex()].endIpAddress]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "databasesNew",
+        "count": "[length(parameters('databaseNames'))]"
+      },
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('generatedPgName'), parameters('databaseNames')[copyIndex()])]",
+      "properties": {
+        "charset": "UTF8",
+        "collation": "en_US.utf8"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "databasesExisting",
+        "count": "[length(parameters('databaseNames'))]"
+      },
+      "condition": "[not(variables('createNew'))]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', parameters('existingName'), parameters('databaseNames')[copyIndex()])]",
+      "properties": {
+        "charset": "UTF8",
+        "collation": "en_US.utf8"
+      }
+    },
+    {
+      "condition": "[and(variables('createNew'), not(empty(parameters('extensions'))))]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('generatedPgName'), 'azure.extensions')]",
+      "properties": {
+        "value": "[parameters('extensions')]",
+        "source": "user-override"
+      },
+      "dependsOn": [
+        "databasesNew",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+      ]
+    },
+    {
+      "condition": "[and(and(not(variables('createNew')), not(empty(parameters('extensions')))), parameters('updateExistingConfig'))]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', parameters('existingName'), 'azure.extensions')]",
+      "properties": {
+        "value": "[parameters('extensions')]",
+        "source": "user-override"
+      },
+      "dependsOn": [
+        "databasesExisting"
+      ]
+    },
+    {
+      "condition": "[variables('createNew')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+      "apiVersion": "2023-12-01-preview",
+      "name": "[format('{0}/{1}', variables('generatedPgName'), 'require_secure_transport')]",
+      "properties": {
+        "value": "on",
+        "source": "user-override"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "pgServerName": {
+      "type": "string",
+      "value": "[variables('pgName')]"
+    },
+    "pgServerResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgName'))]"
+    },
+    "pgServerFqdn": {
+      "type": "string",
+      "value": "[if(variables('createNew'), reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName')), '2023-12-01-preview').fullyQualifiedDomainName, reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('existingName')), '2023-12-01-preview').fullyQualifiedDomainName)]"
+    },
+    "pgAdminUser": {
+      "type": "string",
+      "value": "[parameters('adminUser')]"
+    }
+  }
+}

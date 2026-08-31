@@ -1,0 +1,70 @@
+# ArgoCD — Azure Gov Cloud Values
+# Placeholders filled by envsubst at deploy time
+
+# ── Global image registry (ACR) ──
+global:
+  image:
+    repository: ${ACR_LOGIN_SERVER}/argoproj/argocd
+    tag: "v3.3.6"
+
+# ── Dex (OIDC broker) ──
+dex:
+  enabled: false
+  image:
+    repository: ${ACR_LOGIN_SERVER}/dexidp/dex
+    tag: "v2.45.1"
+
+# ── Redis (bundled, standalone) ──
+redis:
+  enabled: true
+  image:
+    repository: ${ACR_LOGIN_SERVER}/library/redis
+    tag: "8.2.3-alpine"
+  serviceAccount:
+    create: true
+
+# ── Redis HA (disabled by default) ──
+redis-ha:
+  enabled: false
+
+# ── Notifications (disabled by default) ──
+notifications:
+  enabled: false
+
+# ── Server ──
+server:
+  # Run in HTTP mode — Istio handles TLS termination
+  ingress:
+    enabled: false
+
+configs:
+  params:
+    server.insecure: "true"
+
+# ── Resource limits (dev sizing) ──
+controller:
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+repoServer:
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+server:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"

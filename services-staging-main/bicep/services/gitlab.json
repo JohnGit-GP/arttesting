@@ -1,0 +1,58 @@
+{
+  "service": "gitlab",
+  "description": "GitLab DevOps Platform (EE)",
+
+  "helm": {
+    "repoName": "gitlab",
+    "repoUrl": "https://charts.gitlab.io",
+    "chartName": "gitlab",
+    "chartRef": "gitlab/gitlab",
+    "chartVersion": "9.11.0",
+    "releaseName": "gitlab",
+    "namespace": "gitlab",
+    "source": "oci"
+  },
+
+  "istioRevision": "asm-1-27",
+
+  "questions": [
+    { "var": "ENABLE_REGISTRY", "prompt": "Enable Container Registry?", "default": "yes" },
+    { "var": "ENABLE_PAGES", "prompt": "Enable GitLab Pages?", "default": "no" },
+    { "var": "ENABLE_KAS", "prompt": "Enable KAS (Kubernetes Agent Server)?", "default": "yes" },
+    { "var": "ENABLE_RUNNER", "prompt": "Enable bundled GitLab Runner?", "default": "no" }
+  ],
+
+  "secrets": [
+    { "envVar": "PG_ADMIN_PASSWORD", "prompt": "PostgreSQL admin password", "generate": "prompt", "condition": "always" },
+    { "envVar": "GITLAB_DB_PASSWORD", "prompt": "GitLab DB password", "generate": "prompt", "condition": "always" },
+    { "envVar": "REDIS_PASSWORD", "prompt": "Redis password", "generate": "prompt", "condition": "always" },
+    { "envVar": "GITLAB_ROOT_PASSWORD", "prompt": "GitLab root user password", "generate": "prompt", "condition": "always" },
+    { "envVar": "RAILS_SECRET_KEY_BASE", "prompt": "Rails secret_key_base", "generate": "hex32", "condition": "always" },
+    { "envVar": "RAILS_OTP_KEY_BASE", "prompt": "Rails otp_key_base", "generate": "hex32", "condition": "always" },
+    { "envVar": "RAILS_DB_KEY_BASE", "prompt": "Rails db_key_base", "generate": "hex32", "condition": "always" },
+    { "envVar": "STORAGE_ACCOUNT_KEY", "prompt": "Storage account key", "generate": "storage_key", "condition": "always" }
+  ],
+
+  "k8sSecrets": [
+    {
+      "name": "gitlab-postgresql-password",
+      "data": { "postgres-password": "${GITLAB_DB_PASSWORD}" }
+    },
+    {
+      "name": "gitlab-redis-secret",
+      "data": { "redis-password": "${REDIS_PASSWORD}" }
+    },
+    {
+      "name": "gitlab-gitlab-initial-root-password",
+      "data": { "password": "${GITLAB_ROOT_PASSWORD}" }
+    }
+  ],
+
+  "externalNameServices": [],
+
+  "argocd": {
+    "project": "services",
+    "syncPolicy": "automated",
+    "namespace": "argocd"
+  }
+}

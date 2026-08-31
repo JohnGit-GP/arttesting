@@ -1,0 +1,37 @@
+{
+  "service": "argocd",
+  "description": "ArgoCD GitOps Continuous Delivery",
+
+  "helm": {
+    "repoName": "argo",
+    "repoUrl": "https://argoproj.github.io/argo-helm",
+    "chartName": "argo-cd",
+    "chartRef": "argo/argo-cd",
+    "chartVersion": "9.5.1",
+    "releaseName": "argocd",
+    "namespace": "argocd",
+    "source": "oci"
+  },
+
+  "istioRevision": "asm-1-27",
+
+  "questions": [
+    { "var": "ENABLE_DEX", "prompt": "Enable Dex (OIDC broker for SSO)?", "default": "no" },
+    { "var": "ENABLE_NOTIFICATIONS", "prompt": "Enable Notifications controller?", "default": "no" },
+    { "var": "ENABLE_HA_REDIS", "prompt": "Enable Redis HA (3-node cluster)?", "default": "no" }
+  ],
+
+  "secrets": [
+    { "envVar": "ARGOCD_ADMIN_PASSWORD", "prompt": "ArgoCD admin password", "generate": "prompt", "condition": "always" }
+  ],
+
+  "k8sSecrets": [],
+
+  "externalNameServices": [],
+
+  "argocd": {
+    "project": "default",
+    "syncPolicy": "manual",
+    "namespace": "argocd"
+  }
+}

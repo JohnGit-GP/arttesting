@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "14179713729391092634"
+    }
+  },
+  "parameters": {
+    "zoneName": {
+      "type": "string",
+      "metadata": {
+        "description": "DNS zone name (e.g., privatelink.postgres.database.azure.com)"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "vnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "VNet resource ID to link"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/privateDnsZones",
+      "apiVersion": "2024-06-01",
+      "name": "[parameters('zoneName')]",
+      "location": "global",
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "apiVersion": "2024-06-01",
+      "name": "[format('{0}/{1}', parameters('zoneName'), format('link-{0}', last(split(parameters('vnetResourceId'), '/'))))]",
+      "location": "global",
+      "properties": {
+        "virtualNetwork": {
+          "id": "[parameters('vnetResourceId')]"
+        },
+        "registrationEnabled": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "zoneId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+    }
+  }
+}

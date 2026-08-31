@@ -1,0 +1,176 @@
+Managed (20)
+pg-artifactory-zfoexwdkvkkgk/azure.extensions
+Microsoft.DBforPostgreSQL/flexibleServers/configurations
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pg-artifactory-zfoexwdkvkkgk/artifactory
+Microsoft.DBforPostgreSQL/flexibleServers/databases
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pg-artifactory-zfoexwdkvkkgk/distribution
+Microsoft.DBforPostgreSQL/flexibleServers/databases
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-artifactory-db-password
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-distribution-db-password
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-erlang-cookie
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-join-key
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-master-key
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-pg-admin-password
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-rabbitmq-password
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+igu-d-kv-artifactory3/artifactory-xray-db-password
+Microsoft.KeyVault/vaults/secrets
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-blob-artifactory
+Private endpoint
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-blob-artifactory/default
+Microsoft.Network/privateEndpoints/privateDnsZoneGroups
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-kv-artifactory
+Private endpoint
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-kv-artifactory/default
+Microsoft.Network/privateEndpoints/privateDnsZoneGroups
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-pg-artifactory
+Private endpoint
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pe-pg-artifactory/default
+Microsoft.Network/privateEndpoints/privateDnsZoneGroups
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+startifactoryzfoexwdkvkk/default
+Microsoft.Storage/storageAccounts/blobServices
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+startifactoryzfoexwdkvkk/default/artifactory-data
+Microsoft.Storage/storageAccounts/blobServices/containers
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+pg-artifactory-zfoexwdkvkkgk/xraydb
+Microsoft.DBforPostgreSQL/flexibleServers/databases
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+none
+
+Detatched (3)
+pg-artifactory-zfoexwdkvkkgk
+Azure Database for PostgreSQL flexible server
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+igu-d-kv-artifactory3
+Key vault
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+startifactoryzfoexwdkvkk
+Storage account
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+
+Deleted (3)
+pg-artifactory-zfoexwdkvkkgk/xray
+Microsoft.DBforPostgreSQL/flexibleServers/databases
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+privatelink.blob.core.usgovcloudapi.net
+Private DNS zone
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+privatelink.blob.core.usgovcloudapi.net/link-iguan-d-va-vnet-0
+Virtual network link
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+
+Failed (3)
+pg-artifactory-zfoexwdkvkkgk
+(Error details)
+{"code":"ResourceDeletionBlocked","target":"/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-artifactory-zfoexwdkvkkgk","message":"Unable to delete resource '/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-artifactory-zfoexwdkvkkgk' because it has one or more children still being managed by the deployment stack. This resource was detached instead."}
+Azure Database for PostgreSQL flexible server
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+igu-d-kv-artifactory3
+(Error details)
+{"code":"ResourceDeletionBlocked","target":"/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.KeyVault/vaults/igu-d-kv-artifactory3","message":"Unable to delete resource '/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.KeyVault/vaults/igu-d-kv-artifactory3' because it has one or more children still being managed by the deployment stack. This resource was detached instead."}
+Key vault
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app
+
+startifactoryzfoexwdkvkk
+(Error details)
+{"code":"ResourceDeletionBlocked","target":"/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.Storage/storageAccounts/startifactoryzfoexwdkvkk","message":"Unable to delete resource '/subscriptions/cb6d3da2-6d42-4e7e-bb40-6e6d71608991/resourceGroups/iguan-d-va-rg-lz-app-network/providers/Microsoft.Storage/storageAccounts/startifactoryzfoexwdkvkk' because it has one or more children still being managed by the deployment stack. This resource was detached instead."}
+Storage account
+iguan-d-va-rg-lz-app-network
+iguan-d-sub-lz-app

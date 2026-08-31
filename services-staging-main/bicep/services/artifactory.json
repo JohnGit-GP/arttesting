@@ -1,0 +1,130 @@
+{
+  "service": "artifactory",
+  "description": "JFrog Artifactory Platform",
+  "helm": {
+    "repoName": "jfrog",
+    "repoUrl": "https://charts.jfrog.io",
+    "chartName": "jfrog-platform",
+    "chartRef": "jfrog/jfrog-platform",
+    "chartVersion": "10.12.0",
+    "releaseName": "artifactory",
+    "namespace": "artifactory",
+    "source": "repo"
+  },
+  "istioRevision": "asm-1-27",
+  "questions": [
+    {
+      "var": "ENABLE_XRAY",
+      "prompt": "Enable Xray (vulnerability scanning)?",
+      "default": "yes"
+    },
+    {
+      "var": "ENABLE_DISTRIBUTION",
+      "prompt": "Enable Distribution (release management)?",
+      "default": "yes"
+    },
+    {
+      "var": "ENABLE_RABBITMQ",
+      "prompt": "Enable RabbitMQ (required for Xray)?",
+      "default": "yes"
+    }
+  ],
+  "secrets": [
+    {
+      "envVar": "PG_ADMIN_PASSWORD",
+      "prompt": "PostgreSQL admin password",
+      "generate": "prompt",
+      "condition": "always"
+    },
+    {
+      "envVar": "MASTER_KEY",
+      "prompt": "Master key",
+      "generate": "hex32",
+      "condition": "always"
+    },
+    {
+      "envVar": "JOIN_KEY",
+      "prompt": "Join key",
+      "generate": "hex32",
+      "condition": "always"
+    },
+    {
+      "envVar": "ARTIFACTORY_DB_PASSWORD",
+      "prompt": "Artifactory DB password",
+      "generate": "prompt",
+      "condition": "always"
+    },
+    {
+      "envVar": "XRAY_DB_PASSWORD",
+      "prompt": "Xray DB password",
+      "generate": "prompt",
+      "condition": "ENABLE_XRAY"
+    },
+    {
+      "envVar": "DISTRIBUTION_DB_PASSWORD",
+      "prompt": "Distribution DB password",
+      "generate": "prompt",
+      "condition": "ENABLE_DISTRIBUTION"
+    },
+    {
+      "envVar": "RABBITMQ_PASSWORD",
+      "prompt": "RabbitMQ password",
+      "generate": "base64_24",
+      "condition": "ENABLE_RABBITMQ"
+    },
+    {
+      "envVar": "ERLANG_COOKIE",
+      "prompt": "Erlang cookie",
+      "generate": "hex32",
+      "condition": "ENABLE_RABBITMQ"
+    },
+    {
+      "envVar": "STORAGE_ACCOUNT_KEY",
+      "prompt": "Storage account key",
+      "generate": "storage_key",
+      "condition": "always"
+    }
+  ],
+  "k8sSecrets": [
+    {
+      "name": "artifactory-master-key",
+      "data": {
+        "master-key": "${MASTER_KEY}"
+      }
+    },
+    {
+      "name": "artifactory-join-key",
+      "data": {
+        "join-key": "${JOIN_KEY}"
+      }
+    },
+    {
+      "name": "artifactory-db-creds",
+      "data": {
+        "db-admin-user": "${PG_ADMIN_USER}",
+        "db-admin-password": "${PG_ADMIN_PASSWORD}",
+        "db-artifactory-password": "${ARTIFACTORY_DB_PASSWORD}",
+        "db-xray-password": "${XRAY_DB_PASSWORD}",
+        "db-distribution-password": "${DISTRIBUTION_DB_PASSWORD}"
+      }
+    },
+    {
+      "name": "azure-blob-creds",
+      "data": {
+        "account-name": "${STORAGE_ACCOUNT_NAME}",
+        "account-key": "${STORAGE_ACCOUNT_KEY}"
+      }
+    }
+  ],
+  "externalNameServices": [
+    {
+      "name": "artifactory-artifactory",
+      "target": "artifactory.artifactory.svc.cluster.local"
+    }
+  ],
+  "argocd": {
+    "project": "services",
+    "syncPolicy": "automated",
+    "namespace": "argocd"
+  }
+}

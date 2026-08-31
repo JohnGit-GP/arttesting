@@ -1,0 +1,217 @@
+# ============================================================
+# JFrog Platform — Artifactory + Xray + Distribution
+# External Azure Flex PostgreSQL + Azure Blob storage
+# setupPostgres disabled; DB users created by db-bootstrap.sh (Phase 2.5)
+# Istio sidecar with PG port excluded from mTLS
+# ============================================================
+
+global:
+  imageRegistry: releases-docker.jfrog.io
+
+  masterKeySecretName: artifactory-master-key
+  masterKeySecretKey: master-key
+  joinKeySecretName: artifactory-join-key
+  joinKeySecretKey: join-key
+
+  database:
+    host: "${PG_SERVER_FQDN}"
+    port: 5432
+    sslMode: require
+    # No secrets: block — chart auto-generates <release>-database-creds
+    # from each subchart's database.user / database.password values.
+
+# ── Disable Bundled PostgreSQL ──
+postgresql:
+  enabled: false
+  # Even with enabled:false, the postgres-setup-init container reads these
+  # to authenticate to the external PG so it can CREATE USER artifactory etc.
+  # Azure PG Flex's admin user is pgadmin, not the chart-default 'postgres'.
+  postgresqlUsername: "${PG_ADMIN_USER}"
+  postgresqlPassword: "${PG_ADMIN_PASSWORD}"
+  postgresqlDatabase: "artifactory"
+
+# ══════════════════════════════════════════
+# Artifactory
+# ══════════════════════════════════════════
+artifactory:
+  waitForDatabase: false
+  databaseUpgradeReady: true   # ← skips the postgres-setup-init container entirely
+
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeOutboundPorts: "5432"
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+
+  nginx:
+    enabled: false        # using Istio Gateway
+
+  jfconnect:
+    enabled: false        # requires internet to JFrog Cloud
+
+  postgresql:
+    enabled: false
+
+  database:
+    type: postgresql
+    driver: org.postgresql.Driver
+    url: "jdbc:postgresql://${PG_SERVER_FQDN}:5432/artifactory?sslmode=require"
+    user: artifactory
+    password: "${ARTIFACTORY_DB_PASSWORD}"
+    maxOpenConnections: 20
+
+  artifactory:
+    setupPostgres:
+      enabled: false
+
+    persistence:
+      type: azure-blob-storage-direct
+      azureBlob:
+        accountName: "${STORAGE_ACCOUNT_NAME}"
+        accountKey: "${STORAGE_ACCOUNT_KEY}"
+        containerName: "artifactory-data"
+        endpoint: "https://${STORAGE_ACCOUNT_NAME}.${BLOB_ENDPOINT_SUFFIX}"
+
+    resources:
+      requests:
+        cpu: "1"
+        memory: "3Gi"
+      limits:
+        cpu: "2"
+        memory: "5Gi"
+
+  frontend:
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  router:
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  metadata:
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits:   { cpu: 500m, memory: 1Gi }
+
+  access:
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits:   { cpu: 500m, memory: 1Gi }
+
+  event:
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+
+  observability:
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+
+  integration:
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+
+# ══════════════════════════════════════════
+# Xray
+# ══════════════════════════════════════════
+xray:
+  enabled: ${ENABLE_XRAY}
+  waitForDatabase: false
+
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeOutboundPorts: "5432"
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+
+  rabbitmq:
+    external:
+      username: admin
+      password: "${RABBITMQ_PASSWORD}"
+      url: "amqp://artifactory-rabbitmq:5672/xray"
+      erlangCookie: "${ERLANG_COOKIE}"
+
+  postgresql:
+    enabled: false
+
+  database:
+    type: postgres
+    url: "postgres://${PG_SERVER_FQDN}:5432/xraydb?sslmode=require"
+    user: xray
+    password: "${XRAY_DB_PASSWORD}"
+    maxOpenConnections: 10
+
+  common:
+    setupPostgres:
+      enabled: false
+    rabbitmq:
+      connectionConfigFromEnvironment: false
+
+  server:
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1, memory: 1Gi }
+
+  analysis:
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1, memory: 1Gi }
+
+  indexer:
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1, memory: 1Gi }
+
+  persist:
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+# ══════════════════════════════════════════
+# RabbitMQ (required by Xray)
+# ══════════════════════════════════════════
+rabbitmq:
+  enabled: ${ENABLE_RABBITMQ}
+  auth:
+    username: admin
+    password: "${RABBITMQ_PASSWORD}"
+    erlangCookie: "${ERLANG_COOKIE}"
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits:   { cpu: 500m, memory: 1Gi }
+
+insight:
+  enabled: false
+
+pipelines:
+  enabled: false
+
+# ══════════════════════════════════════════
+# Distribution
+# ══════════════════════════════════════════
+distribution:
+  enabled: ${ENABLE_DISTRIBUTION}
+  waitForDatabase: false
+
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeOutboundPorts: "5432"
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+
+  postgresql:
+    enabled: false
+
+  database:
+    type: postgresql
+    driver: org.postgresql.Driver
+    url: "jdbc:postgresql://${PG_SERVER_FQDN}:5432/distribution?sslmode=require"
+    user: distribution
+    password: "${DISTRIBUTION_DB_PASSWORD}"
+    maxOpenConnections: 10
+
+  distribution:
+    setupPostgres:
+      enabled: false
+
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1, memory: 1Gi }

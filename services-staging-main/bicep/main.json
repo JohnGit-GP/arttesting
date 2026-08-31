@@ -1,0 +1,2057 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "11075215287624777314"
+    }
+  },
+  "parameters": {
+    "serviceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Service identifier used for resource naming and tagging"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "test",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "usgovvirginia",
+      "allowedValues": [
+        "usgovvirginia",
+        "usgovarizona",
+        "usgovtexas"
+      ],
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "aksClusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "AKS cluster name"
+      }
+    },
+    "aksClusterResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "AKS cluster resource group"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "VNet name (for private endpoints)"
+      }
+    },
+    "vnetResourceGroup": {
+      "type": "string",
+      "defaultValue": "[parameters('aksClusterResourceGroup')]",
+      "metadata": {
+        "description": "VNet resource group"
+      }
+    },
+    "privateEndpointSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet name for private endpoints"
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "metadata": {
+        "description": "ACR name"
+      }
+    },
+    "acrResourceGroup": {
+      "type": "string",
+      "defaultValue": "[parameters('aksClusterResourceGroup')]",
+      "metadata": {
+        "description": "ACR resource group"
+      }
+    },
+    "deployPostgresql": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy PostgreSQL Flexible Server"
+      }
+    },
+    "deployStorageAccount": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy Azure Storage Account"
+      }
+    },
+    "deployKeyVault": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy Key Vault"
+      }
+    },
+    "deployPrivateEndpoints": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy private endpoints"
+      }
+    },
+    "updateExistingInfrastructure": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "When reusing existing infrastructure, also push config updates (PG extensions, Storage blob service). Default false to avoid clobbering ops-managed state."
+      }
+    },
+    "existingPgServerName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing PostgreSQL server name (empty = create new)"
+      }
+    },
+    "existingStorageAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing Storage Account name (empty = create new)"
+      }
+    },
+    "existingKeyVaultName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing Key Vault name (empty = create new)"
+      }
+    },
+    "pgSkuName": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "metadata": {
+        "description": "PostgreSQL SKU name"
+      }
+    },
+    "pgSkuTier": {
+      "type": "string",
+      "defaultValue": "Burstable",
+      "allowedValues": [
+        "Burstable",
+        "GeneralPurpose",
+        "MemoryOptimized"
+      ],
+      "metadata": {
+        "description": "PostgreSQL SKU tier"
+      }
+    },
+    "pgStorageSizeGB": {
+      "type": "int",
+      "defaultValue": 32,
+      "metadata": {
+        "description": "PostgreSQL storage size in GB"
+      }
+    },
+    "pgVersion": {
+      "type": "string",
+      "defaultValue": "16",
+      "allowedValues": [
+        "15",
+        "16",
+        "17"
+      ],
+      "metadata": {
+        "description": "PostgreSQL version"
+      }
+    },
+    "pgHighAvailability": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Disabled",
+        "ZoneRedundant"
+      ],
+      "metadata": {
+        "description": "PostgreSQL HA mode"
+      }
+    },
+    "pgDatabaseNames": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Database names to create"
+      }
+    },
+    "pgExtensions": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "PostgreSQL extensions (comma-separated)"
+      }
+    },
+    "pgAdminUser": {
+      "type": "string",
+      "defaultValue": "pgadmin",
+      "metadata": {
+        "description": "PostgreSQL admin user"
+      }
+    },
+    "pgAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "PostgreSQL admin password"
+      }
+    },
+    "storageSkuName": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "Storage SKU"
+      }
+    },
+    "storageBlobContainers": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Blob container names"
+      }
+    },
+    "keyVaultSecrets": {
+      "type": "secureObject",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Secrets to store in Key Vault as {name: value} object"
+      }
+    },
+    "newKeyVaultName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name for new Key Vault (ignored if existingKeyVaultName is set)"
+      }
+    },
+    "deployerObjectId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "AAD objectId of the user/SP running the deploy. Forwarded to the Key Vault module so deploy.sh and helm-deploy.sh can read/write secrets without an out-of-band grant."
+      }
+    },
+    "existingPrivateDnsZoneIdPg": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing privatelink postgres zone resource ID (empty = create per-service)"
+      }
+    },
+    "existingPrivateDnsZoneIdBlob": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing privatelink blob zone resource ID (empty = create per-service)"
+      }
+    },
+    "existingPrivateDnsZoneIdKv": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Existing privatelink vaultcore zone resource ID (empty = create per-service)"
+      }
+    }
+  },
+  "variables": {
+    "defaultTags": "[union(parameters('tags'), createObject('service', parameters('serviceName'), 'environment', parameters('environment'), 'managedBy', 'bicep'))]",
+    "peSubnetId": "[format('{0}/subnets/{1}', extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('vnetResourceGroup')), 'Microsoft.Network/virtualNetworks', parameters('vnetName')), parameters('privateEndpointSubnetName'))]",
+    "hasPg": "[or(parameters('deployPostgresql'), not(empty(parameters('existingPgServerName'))))]",
+    "hasStorage": "[or(parameters('deployStorageAccount'), not(empty(parameters('existingStorageAccountName'))))]",
+    "hasKv": "[or(parameters('deployKeyVault'), not(empty(parameters('existingKeyVaultName'))))]",
+    "isGov": "[equals(environment().name, 'AzureUSGovernment')]",
+    "pgPrivatelinkZone": "[if(variables('isGov'), 'privatelink.postgres.database.usgovcloudapi.net', 'privatelink.postgres.database.azure.com')]",
+    "blobPrivatelinkZone": "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
+    "kvPrivatelinkZone": "[if(variables('isGov'), 'privatelink.vaultcore.usgovcloudapi.net', 'privatelink.vaultcore.azure.net')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-identity-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "serviceName": {
+            "value": "[parameters('serviceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "aksClusterName": {
+            "value": "[parameters('aksClusterName')]"
+          },
+          "aksClusterResourceGroup": {
+            "value": "[parameters('aksClusterResourceGroup')]"
+          },
+          "acrName": {
+            "value": "[parameters('acrName')]"
+          },
+          "acrResourceGroup": {
+            "value": "[parameters('acrResourceGroup')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17797450699236520571"
+            }
+          },
+          "parameters": {
+            "serviceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix for the managed identity"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "aksClusterName": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS cluster name"
+              }
+            },
+            "aksClusterResourceGroup": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS cluster resource group"
+              }
+            },
+            "acrName": {
+              "type": "string",
+              "metadata": {
+                "description": "ACR name"
+              }
+            },
+            "acrResourceGroup": {
+              "type": "string",
+              "metadata": {
+                "description": "ACR resource group"
+              }
+            }
+          },
+          "variables": {
+            "aksClusterUserRoleId": "4abbcc35-e782-43d8-92c5-2d3f1bd2253f",
+            "acrPullRoleId": "7f951dda-4ed3-4680-a7ca-43fe172d538d"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('id-{0}-deployer', parameters('serviceName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "identityId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName')))]"
+            },
+            "identityPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName'))), '2023-01-31').principalId]"
+            },
+            "identityClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName'))), '2023-01-31').clientId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[variables('hasKv')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-keyvault-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "newKeyVaultName": {
+            "value": "[parameters('newKeyVaultName')]"
+          },
+          "serviceName": {
+            "value": "[parameters('serviceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "identityPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-identity-{0}', parameters('serviceName'))), '2025-04-01').outputs.identityPrincipalId.value]"
+          },
+          "deployerObjectId": {
+            "value": "[parameters('deployerObjectId')]"
+          },
+          "secrets": {
+            "value": "[parameters('keyVaultSecrets')]"
+          },
+          "existingName": {
+            "value": "[parameters('existingKeyVaultName')]"
+          },
+          "disablePublicNetworkAccess": {
+            "value": "[parameters('deployPrivateEndpoints')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17234852113110479761"
+            }
+          },
+          "parameters": {
+            "serviceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix for new Key Vault (ignored if existingName provided)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "newKeyVaultName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Name for new Key Vault (ignored if existingName provided). Empty = auto-generate."
+              }
+            },
+            "identityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Managed identity principal ID for access policy"
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "defaultValue": "[subscription().tenantId]",
+              "metadata": {
+                "description": "Key Vault tenant ID (defaults to current subscription tenant)"
+              }
+            },
+            "existingName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Name of an existing Key Vault to use (empty = create new)"
+              }
+            },
+            "softDeleteRetentionInDays": {
+              "type": "int",
+              "defaultValue": 90,
+              "minValue": 7,
+              "maxValue": 90,
+              "metadata": {
+                "description": "Soft-delete retention in days (7-90)"
+              }
+            },
+            "enablePurgeProtection": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable purge protection. IRREVERSIBLE once set to true."
+              }
+            },
+            "disablePublicNetworkAccess": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Disable public network access (recommended when fronted by a private endpoint)"
+              }
+            },
+            "deployerObjectId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional AAD objectId of the deploying user/SP. When set, grants get/list/set/delete on secrets so deploy.sh and helm-deploy.sh can manage them. Empty = no deployer policy added."
+              }
+            },
+            "secrets": {
+              "type": "secureObject",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Secrets to create as name/value pairs"
+              }
+            }
+          },
+          "variables": {
+            "createNew": "[empty(parameters('existingName'))]",
+            "generatedName": "[take(format('kv-{0}-{1}', parameters('serviceName'), uniqueString(resourceGroup().id)), 24)]",
+            "kvName": "[if(variables('createNew'), if(empty(parameters('newKeyVaultName')), variables('generatedName'), parameters('newKeyVaultName')), parameters('existingName'))]",
+            "hasDeployer": "[not(empty(parameters('deployerObjectId')))]",
+            "identityAccessPolicy": {
+              "tenantId": "[parameters('tenantId')]",
+              "objectId": "[parameters('identityPrincipalId')]",
+              "permissions": {
+                "secrets": [
+                  "get",
+                  "list",
+                  "set",
+                  "delete"
+                ]
+              }
+            },
+            "deployerAccessPolicy": {
+              "tenantId": "[parameters('tenantId')]",
+              "objectId": "[parameters('deployerObjectId')]",
+              "permissions": {
+                "secrets": [
+                  "get",
+                  "list",
+                  "set",
+                  "delete"
+                ]
+              }
+            },
+            "initialAccessPolicies": "[if(variables('hasDeployer'), createArray(variables('identityAccessPolicy'), variables('deployerAccessPolicy')), createArray(variables('identityAccessPolicy')))]"
+          },
+          "resources": [
+            {
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('kvName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[parameters('tenantId')]",
+                "enableRbacAuthorization": false,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+                "enablePurgeProtection": "[parameters('enablePurgeProtection')]",
+                "publicNetworkAccess": "[if(parameters('disablePublicNetworkAccess'), 'Disabled', 'Enabled')]",
+                "networkAcls": {
+                  "defaultAction": "[if(parameters('disablePublicNetworkAccess'), 'Deny', 'Allow')]",
+                  "bypass": "AzureServices",
+                  "ipRules": [],
+                  "virtualNetworkRules": []
+                },
+                "accessPolicies": "[variables('initialAccessPolicies')]"
+              }
+            },
+            {
+              "condition": "[not(variables('createNew'))]",
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('existingName'), 'add')]",
+              "properties": {
+                "accessPolicies": "[variables('initialAccessPolicies')]"
+              }
+            },
+            {
+              "copy": {
+                "name": "kvSecretsNew",
+                "count": "[length(objectKeys(parameters('secrets')))]"
+              },
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', variables('kvName'), objectKeys(parameters('secrets'))[copyIndex()])]",
+              "properties": {
+                "value": "[parameters('secrets')[objectKeys(parameters('secrets'))[copyIndex()]]]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('kvName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "kvSecretsExisting",
+                "count": "[length(objectKeys(parameters('secrets')))]"
+              },
+              "condition": "[not(variables('createNew'))]",
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('existingName'), objectKeys(parameters('secrets'))[copyIndex()])]",
+              "properties": {
+                "value": "[parameters('secrets')[objectKeys(parameters('secrets'))[copyIndex()]]]"
+              }
+            }
+          ],
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[variables('kvName')]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[format('https://{0}{1}/', variables('kvName'), environment().suffixes.keyvaultDns)]"
+            },
+            "keyVaultResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', variables('kvName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-identity-{0}', parameters('serviceName')))]"
+      ]
+    },
+    {
+      "condition": "[variables('hasPg')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-postgresql-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "serviceName": {
+            "value": "[parameters('serviceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "adminUser": {
+            "value": "[parameters('pgAdminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('pgAdminPassword')]"
+          },
+          "skuName": {
+            "value": "[parameters('pgSkuName')]"
+          },
+          "skuTier": {
+            "value": "[parameters('pgSkuTier')]"
+          },
+          "storageSizeGB": {
+            "value": "[parameters('pgStorageSizeGB')]"
+          },
+          "version": {
+            "value": "[parameters('pgVersion')]"
+          },
+          "highAvailability": {
+            "value": "[parameters('pgHighAvailability')]"
+          },
+          "databaseNames": {
+            "value": "[parameters('pgDatabaseNames')]"
+          },
+          "extensions": {
+            "value": "[parameters('pgExtensions')]"
+          },
+          "existingName": {
+            "value": "[parameters('existingPgServerName')]"
+          },
+          "updateExistingConfig": {
+            "value": "[parameters('updateExistingInfrastructure')]"
+          },
+          "disablePublicNetworkAccess": {
+            "value": "[parameters('deployPrivateEndpoints')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "1450819262648171146"
+            }
+          },
+          "parameters": {
+            "serviceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix (ignored if existingName provided)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "adminUser": {
+              "type": "string",
+              "defaultValue": "pgadmin",
+              "metadata": {
+                "description": "Administrator username"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Administrator password (required when creating a new server; may be any non-empty value when reusing existing)"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard_B1ms",
+              "metadata": {
+                "description": "SKU name (e.g., Standard_B1ms, Standard_D4ds_v5)"
+              }
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "Burstable",
+              "allowedValues": [
+                "Burstable",
+                "GeneralPurpose",
+                "MemoryOptimized"
+              ],
+              "metadata": {
+                "description": "SKU tier"
+              }
+            },
+            "storageSizeGB": {
+              "type": "int",
+              "defaultValue": 32,
+              "metadata": {
+                "description": "Storage size in GB"
+              }
+            },
+            "version": {
+              "type": "string",
+              "defaultValue": "16",
+              "allowedValues": [
+                "15",
+                "16",
+                "17"
+              ],
+              "metadata": {
+                "description": "PostgreSQL version"
+              }
+            },
+            "highAvailability": {
+              "type": "string",
+              "defaultValue": "Disabled",
+              "allowedValues": [
+                "Disabled",
+                "ZoneRedundant"
+              ],
+              "metadata": {
+                "description": "High availability mode"
+              }
+            },
+            "databaseNames": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Database names to create"
+              }
+            },
+            "extensions": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "PostgreSQL extensions to enable (comma-separated). NOTE: overwrites azure.extensions on existing servers."
+              }
+            },
+            "networkAccess": {
+              "type": "string",
+              "defaultValue": "public",
+              "allowedValues": [
+                "public",
+                "private"
+              ],
+              "metadata": {
+                "description": "Network access mode. \"private\" requires delegatedSubnetResourceId + privateDnsZoneArmResourceId (VNet-integrated). \"public\" allows firewall rules AND supports a Private Endpoint when paired with disablePublicNetworkAccess=true."
+              }
+            },
+            "delegatedSubnetResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Delegated subnet resource ID for private mode (required when networkAccess=private)"
+              }
+            },
+            "privateDnsZoneArmResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Private DNS zone resource ID for private mode (required when networkAccess=private)"
+              }
+            },
+            "disablePublicNetworkAccess": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "When networkAccess=public, disable public network access on the server (use with a Private Endpoint). Ignored in private (delegated-subnet) mode."
+              }
+            },
+            "allowAzureServices": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "When public, add a firewall rule allowing Azure services (0.0.0.0)"
+              }
+            },
+            "firewallAllowList": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Public firewall IP allow-list entries (ignored when private). Each item: { name, startIpAddress, endIpAddress }"
+              }
+            },
+            "backupRetentionDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "minValue": 7,
+              "maxValue": 35,
+              "metadata": {
+                "description": "Backup retention in days (7-35)"
+              }
+            },
+            "geoRedundantBackup": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable geo-redundant backup"
+              }
+            },
+            "existingName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Name of an existing PostgreSQL server to use (empty = create new)"
+              }
+            },
+            "updateExistingConfig": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "When reusing an existing server, also push config (extensions) to it. Default false to avoid clobbering ops-managed state."
+              }
+            }
+          },
+          "variables": {
+            "createNew": "[empty(parameters('existingName'))]",
+            "isPrivate": "[equals(parameters('networkAccess'), 'private')]",
+            "generatedPgName": "[format('pg-{0}-{1}', parameters('serviceName'), uniqueString(resourceGroup().id))]",
+            "pgName": "[if(variables('createNew'), variables('generatedPgName'), parameters('existingName'))]",
+            "publicNetworkBlock": {
+              "publicNetworkAccess": "[if(parameters('disablePublicNetworkAccess'), 'Disabled', 'Enabled')]"
+            },
+            "privateNetworkBlock": {
+              "publicNetworkAccess": "Disabled",
+              "delegatedSubnetResourceId": "[parameters('delegatedSubnetResourceId')]",
+              "privateDnsZoneArmResourceId": "[parameters('privateDnsZoneArmResourceId')]"
+            }
+          },
+          "resources": [
+            {
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[variables('generatedPgName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "[parameters('skuTier')]"
+              },
+              "properties": {
+                "version": "[parameters('version')]",
+                "administratorLogin": "[parameters('adminUser')]",
+                "administratorLoginPassword": "[parameters('adminPassword')]",
+                "storage": {
+                  "storageSizeGB": "[parameters('storageSizeGB')]"
+                },
+                "highAvailability": {
+                  "mode": "[parameters('highAvailability')]"
+                },
+                "backup": {
+                  "backupRetentionDays": "[parameters('backupRetentionDays')]",
+                  "geoRedundantBackup": "[if(parameters('geoRedundantBackup'), 'Enabled', 'Disabled')]"
+                },
+                "network": "[if(variables('isPrivate'), variables('privateNetworkBlock'), variables('publicNetworkBlock'))]"
+              }
+            },
+            {
+              "condition": "[and(and(and(variables('createNew'), not(variables('isPrivate'))), not(parameters('disablePublicNetworkAccess'))), parameters('allowAzureServices'))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', variables('generatedPgName'), 'AllowAllAzureServices')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "fwAllowList",
+                "count": "[length(parameters('firewallAllowList'))]"
+              },
+              "condition": "[and(and(variables('createNew'), not(variables('isPrivate'))), not(parameters('disablePublicNetworkAccess')))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', variables('generatedPgName'), parameters('firewallAllowList')[copyIndex()].name)]",
+              "properties": {
+                "startIpAddress": "[parameters('firewallAllowList')[copyIndex()].startIpAddress]",
+                "endIpAddress": "[parameters('firewallAllowList')[copyIndex()].endIpAddress]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "databasesNew",
+                "count": "[length(parameters('databaseNames'))]"
+              },
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', variables('generatedPgName'), parameters('databaseNames')[copyIndex()])]",
+              "properties": {
+                "charset": "UTF8",
+                "collation": "en_US.utf8"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "databasesExisting",
+                "count": "[length(parameters('databaseNames'))]"
+              },
+              "condition": "[not(variables('createNew'))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', parameters('existingName'), parameters('databaseNames')[copyIndex()])]",
+              "properties": {
+                "charset": "UTF8",
+                "collation": "en_US.utf8"
+              }
+            },
+            {
+              "condition": "[and(variables('createNew'), not(empty(parameters('extensions'))))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', variables('generatedPgName'), 'azure.extensions')]",
+              "properties": {
+                "value": "[parameters('extensions')]",
+                "source": "user-override"
+              },
+              "dependsOn": [
+                "databasesNew",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+              ]
+            },
+            {
+              "condition": "[and(and(not(variables('createNew')), not(empty(parameters('extensions')))), parameters('updateExistingConfig'))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', parameters('existingName'), 'azure.extensions')]",
+              "properties": {
+                "value": "[parameters('extensions')]",
+                "source": "user-override"
+              },
+              "dependsOn": [
+                "databasesExisting"
+              ]
+            },
+            {
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/configurations",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', variables('generatedPgName'), 'require_secure_transport')]",
+              "properties": {
+                "value": "on",
+                "source": "user-override"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "pgServerName": {
+              "type": "string",
+              "value": "[variables('pgName')]"
+            },
+            "pgServerResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgName'))]"
+            },
+            "pgServerFqdn": {
+              "type": "string",
+              "value": "[if(variables('createNew'), reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('generatedPgName')), '2023-12-01-preview').fullyQualifiedDomainName, reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('existingName')), '2023-12-01-preview').fullyQualifiedDomainName)]"
+            },
+            "pgAdminUser": {
+              "type": "string",
+              "value": "[parameters('adminUser')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[variables('hasStorage')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-storage-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "serviceName": {
+            "value": "[parameters('serviceName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "skuName": {
+            "value": "[parameters('storageSkuName')]"
+          },
+          "blobContainers": {
+            "value": "[parameters('storageBlobContainers')]"
+          },
+          "existingName": {
+            "value": "[parameters('existingStorageAccountName')]"
+          },
+          "disablePublicNetworkAccess": {
+            "value": "[parameters('deployPrivateEndpoints')]"
+          },
+          "updateExistingConfig": {
+            "value": "[parameters('updateExistingInfrastructure')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "16796211610081813447"
+            }
+          },
+          "parameters": {
+            "serviceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix (ignored if existingName provided)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard_LRS",
+              "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_ZRS"
+              ],
+              "metadata": {
+                "description": "Storage SKU"
+              }
+            },
+            "accessTier": {
+              "type": "string",
+              "defaultValue": "Hot",
+              "allowedValues": [
+                "Hot",
+                "Cool"
+              ],
+              "metadata": {
+                "description": "Access tier for the account"
+              }
+            },
+            "blobContainers": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Blob container names to create"
+              }
+            },
+            "disablePublicNetworkAccess": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Disable public network access (recommended when fronted by a private endpoint)"
+              }
+            },
+            "networkAclsDefaultAction": {
+              "type": "string",
+              "defaultValue": "Deny",
+              "allowedValues": [
+                "Allow",
+                "Deny"
+              ],
+              "metadata": {
+                "description": "Default action for network ACLs when public access is enabled"
+              }
+            },
+            "allowedIpRules": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Public IP allow-list when public access is enabled"
+              }
+            },
+            "allowedVirtualNetworkRules": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Virtual network rules when public access is enabled. Each item: { id, action }"
+              }
+            },
+            "allowSharedKeyAccess": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Allow shared key (account key) access. Set false to force Entra-only auth."
+              }
+            },
+            "blobDeleteRetentionDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "minValue": 0,
+              "maxValue": 365,
+              "metadata": {
+                "description": "Blob soft-delete retention in days (0 disables)"
+              }
+            },
+            "containerDeleteRetentionDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "minValue": 0,
+              "maxValue": 365,
+              "metadata": {
+                "description": "Container soft-delete retention in days (0 disables)"
+              }
+            },
+            "enableVersioning": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable blob versioning"
+              }
+            },
+            "existingName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Name of an existing Storage Account to use (empty = create new)"
+              }
+            },
+            "updateExistingConfig": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "When reusing an existing account, also push blob service config (versioning, soft-delete) to it. Default false to avoid clobbering ops-managed state."
+              }
+            }
+          },
+          "variables": {
+            "createNew": "[empty(parameters('existingName'))]",
+            "storageAccountName": "[if(variables('createNew'), take(toLower(format('st{0}{1}', replace(parameters('serviceName'), '-', ''), uniqueString(resourceGroup().id))), 24), parameters('existingName'))]"
+          },
+          "resources": [
+            {
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "[parameters('skuName')]"
+              },
+              "properties": {
+                "accessTier": "[parameters('accessTier')]",
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": "[parameters('allowSharedKeyAccess')]",
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "[if(parameters('disablePublicNetworkAccess'), 'Disabled', 'Enabled')]",
+                "networkAcls": {
+                  "copy": [
+                    {
+                      "name": "ipRules",
+                      "count": "[length(parameters('allowedIpRules'))]",
+                      "input": {
+                        "value": "[parameters('allowedIpRules')[copyIndex('ipRules')]]",
+                        "action": "Allow"
+                      }
+                    }
+                  ],
+                  "defaultAction": "[if(parameters('disablePublicNetworkAccess'), 'Deny', parameters('networkAclsDefaultAction'))]",
+                  "bypass": "AzureServices",
+                  "virtualNetworkRules": "[parameters('allowedVirtualNetworkRules')]"
+                }
+              }
+            },
+            {
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+              "properties": {
+                "isVersioningEnabled": "[parameters('enableVersioning')]",
+                "deleteRetentionPolicy": "[if(greater(parameters('blobDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('blobDeleteRetentionDays'))), createObject('enabled', false()))]",
+                "containerDeleteRetentionPolicy": "[if(greater(parameters('containerDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('containerDeleteRetentionDays'))), createObject('enabled', false()))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "condition": "[and(not(variables('createNew')), parameters('updateExistingConfig'))]",
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('existingName'), 'default')]",
+              "properties": {
+                "isVersioningEnabled": "[parameters('enableVersioning')]",
+                "deleteRetentionPolicy": "[if(greater(parameters('blobDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('blobDeleteRetentionDays'))), createObject('enabled', false()))]",
+                "containerDeleteRetentionPolicy": "[if(greater(parameters('containerDeleteRetentionDays'), 0), createObject('enabled', true(), 'days', max(1, parameters('containerDeleteRetentionDays'))), createObject('enabled', false()))]"
+              }
+            },
+            {
+              "copy": {
+                "name": "containersNew",
+                "count": "[length(parameters('blobContainers'))]"
+              },
+              "condition": "[variables('createNew')]",
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', parameters('blobContainers')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "containersExisting",
+                "count": "[length(parameters('blobContainers'))]"
+              },
+              "condition": "[not(variables('createNew'))]",
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('existingName'), 'default', parameters('blobContainers')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              }
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[variables('storageAccountName')]"
+            },
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            },
+            "blobEndpoint": {
+              "type": "string",
+              "value": "[format('https://{0}.blob.{1}', variables('storageAccountName'), environment().suffixes.storage)]"
+            },
+            "blobEndpointSuffix": {
+              "type": "string",
+              "value": "[environment().suffixes.storage]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[and(and(parameters('deployPrivateEndpoints'), variables('hasPg')), empty(parameters('existingPrivateDnsZoneIdPg')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-dns-pg-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "zoneName": {
+            "value": "[variables('pgPrivatelinkZone')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "vnetResourceId": {
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('vnetResourceGroup')), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14179713729391092634"
+            }
+          },
+          "parameters": {
+            "zoneName": {
+              "type": "string",
+              "metadata": {
+                "description": "DNS zone name (e.g., privatelink.postgres.database.azure.com)"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "vnetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet resource ID to link"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[parameters('zoneName')]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/{1}', parameters('zoneName'), format('link-{0}', last(split(parameters('vnetResourceId'), '/'))))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[parameters('vnetResourceId')]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "zoneId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[and(and(parameters('deployPrivateEndpoints'), variables('hasStorage')), empty(parameters('existingPrivateDnsZoneIdBlob')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-dns-blob-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "zoneName": {
+            "value": "[variables('blobPrivatelinkZone')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "vnetResourceId": {
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('vnetResourceGroup')), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14179713729391092634"
+            }
+          },
+          "parameters": {
+            "zoneName": {
+              "type": "string",
+              "metadata": {
+                "description": "DNS zone name (e.g., privatelink.postgres.database.azure.com)"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "vnetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet resource ID to link"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[parameters('zoneName')]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/{1}', parameters('zoneName'), format('link-{0}', last(split(parameters('vnetResourceId'), '/'))))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[parameters('vnetResourceId')]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "zoneId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[and(and(parameters('deployPrivateEndpoints'), variables('hasKv')), empty(parameters('existingPrivateDnsZoneIdKv')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-dns-kv-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "zoneName": {
+            "value": "[variables('kvPrivatelinkZone')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "vnetResourceId": {
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('vnetResourceGroup')), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14179713729391092634"
+            }
+          },
+          "parameters": {
+            "zoneName": {
+              "type": "string",
+              "metadata": {
+                "description": "DNS zone name (e.g., privatelink.postgres.database.azure.com)"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "vnetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet resource ID to link"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[parameters('zoneName')]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2024-06-01",
+              "name": "[format('{0}/{1}', parameters('zoneName'), format('link-{0}', last(split(parameters('vnetResourceId'), '/'))))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[parameters('vnetResourceId')]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "zoneId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/privateDnsZones', parameters('zoneName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[and(parameters('deployPrivateEndpoints'), variables('hasPg'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-pe-pg-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('pe-pg-{0}', parameters('serviceName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "targetResourceId": "[if(variables('hasPg'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-postgresql-{0}', parameters('serviceName'))), '2025-04-01').outputs.pgServerResourceId.value), createObject('value', ''))]",
+          "groupId": {
+            "value": "postgresqlServer"
+          },
+          "subnetId": {
+            "value": "[variables('peSubnetId')]"
+          },
+          "privateDnsZoneId": "[if(not(empty(parameters('existingPrivateDnsZoneIdPg'))), createObject('value', parameters('existingPrivateDnsZoneIdPg')), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-dns-pg-{0}', parameters('serviceName'))), '2025-04-01').outputs.zoneId.value))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17799985880399146746"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Private endpoint name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "targetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Target resource ID (PG server, storage account, etc.)"
+              }
+            },
+            "groupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Group ID for the private link (e.g., postgresqlServer, blob, vault)"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for the private endpoint"
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Private DNS zone resource ID for auto-registration"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-connection', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('targetResourceId')]",
+                      "groupIds": [
+                        "[parameters('groupId')]"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "[replace(last(split(parameters('privateDnsZoneId'), '/')), '.', '-')]",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('name'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-dns-pg-{0}', parameters('serviceName')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-postgresql-{0}', parameters('serviceName')))]"
+      ]
+    },
+    {
+      "condition": "[and(parameters('deployPrivateEndpoints'), variables('hasStorage'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-pe-blob-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('pe-blob-{0}', parameters('serviceName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "targetResourceId": "[if(variables('hasStorage'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-storage-{0}', parameters('serviceName'))), '2025-04-01').outputs.storageAccountId.value), createObject('value', ''))]",
+          "groupId": {
+            "value": "blob"
+          },
+          "subnetId": {
+            "value": "[variables('peSubnetId')]"
+          },
+          "privateDnsZoneId": "[if(not(empty(parameters('existingPrivateDnsZoneIdBlob'))), createObject('value', parameters('existingPrivateDnsZoneIdBlob')), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-dns-blob-{0}', parameters('serviceName'))), '2025-04-01').outputs.zoneId.value))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17799985880399146746"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Private endpoint name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "targetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Target resource ID (PG server, storage account, etc.)"
+              }
+            },
+            "groupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Group ID for the private link (e.g., postgresqlServer, blob, vault)"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for the private endpoint"
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Private DNS zone resource ID for auto-registration"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-connection', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('targetResourceId')]",
+                      "groupIds": [
+                        "[parameters('groupId')]"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "[replace(last(split(parameters('privateDnsZoneId'), '/')), '.', '-')]",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('name'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-dns-blob-{0}', parameters('serviceName')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-storage-{0}', parameters('serviceName')))]"
+      ]
+    },
+    {
+      "condition": "[and(parameters('deployPrivateEndpoints'), variables('hasKv'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-pe-kv-{0}', parameters('serviceName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('pe-kv-{0}', parameters('serviceName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('defaultTags')]"
+          },
+          "targetResourceId": "[if(variables('hasKv'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-keyvault-{0}', parameters('serviceName'))), '2025-04-01').outputs.keyVaultResourceId.value), createObject('value', ''))]",
+          "groupId": {
+            "value": "vault"
+          },
+          "subnetId": {
+            "value": "[variables('peSubnetId')]"
+          },
+          "privateDnsZoneId": "[if(not(empty(parameters('existingPrivateDnsZoneIdKv'))), createObject('value', parameters('existingPrivateDnsZoneIdKv')), createObject('value', reference(resourceId('Microsoft.Resources/deployments', format('deploy-dns-kv-{0}', parameters('serviceName'))), '2025-04-01').outputs.zoneId.value))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17799985880399146746"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Private endpoint name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "targetResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Target resource ID (PG server, storage account, etc.)"
+              }
+            },
+            "groupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Group ID for the private link (e.g., postgresqlServer, blob, vault)"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for the private endpoint"
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Private DNS zone resource ID for auto-registration"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-connection', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('targetResourceId')]",
+                      "groupIds": [
+                        "[parameters('groupId')]"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "[replace(last(split(parameters('privateDnsZoneId'), '/')), '.', '-')]",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('name'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-dns-kv-{0}', parameters('serviceName')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-keyvault-{0}', parameters('serviceName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "identityId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-identity-{0}', parameters('serviceName'))), '2025-04-01').outputs.identityId.value]"
+    },
+    "identityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-identity-{0}', parameters('serviceName'))), '2025-04-01').outputs.identityPrincipalId.value]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[if(variables('hasKv'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-keyvault-{0}', parameters('serviceName'))), '2025-04-01').outputs.keyVaultName.value, 'not deployed')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[if(variables('hasKv'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-keyvault-{0}', parameters('serviceName'))), '2025-04-01').outputs.keyVaultUri.value, 'not deployed')]"
+    },
+    "pgServerFqdn": {
+      "type": "string",
+      "value": "[if(variables('hasPg'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-postgresql-{0}', parameters('serviceName'))), '2025-04-01').outputs.pgServerFqdn.value, 'not deployed')]"
+    },
+    "pgServerName": {
+      "type": "string",
+      "value": "[if(variables('hasPg'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-postgresql-{0}', parameters('serviceName'))), '2025-04-01').outputs.pgServerName.value, 'not deployed')]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[if(variables('hasStorage'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-storage-{0}', parameters('serviceName'))), '2025-04-01').outputs.storageAccountName.value, 'not deployed')]"
+    },
+    "blobEndpointSuffix": {
+      "type": "string",
+      "value": "[if(variables('hasStorage'), reference(resourceId('Microsoft.Resources/deployments', format('deploy-storage-{0}', parameters('serviceName'))), '2025-04-01').outputs.blobEndpointSuffix.value, 'not deployed')]"
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('acrResourceGroup')), 'Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]"
+    }
+  }
+}

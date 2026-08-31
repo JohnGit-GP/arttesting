@@ -1,0 +1,83 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "17797450699236520571"
+    }
+  },
+  "parameters": {
+    "serviceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name prefix for the managed identity"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "aksClusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "AKS cluster name"
+      }
+    },
+    "aksClusterResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "AKS cluster resource group"
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "metadata": {
+        "description": "ACR name"
+      }
+    },
+    "acrResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "ACR resource group"
+      }
+    }
+  },
+  "variables": {
+    "aksClusterUserRoleId": "4abbcc35-e782-43d8-92c5-2d3f1bd2253f",
+    "acrPullRoleId": "7f951dda-4ed3-4680-a7ca-43fe172d538d"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('id-{0}-deployer', parameters('serviceName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    }
+  ],
+  "outputs": {
+    "identityId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName')))]"
+    },
+    "identityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName'))), '2023-01-31').principalId]"
+    },
+    "identityClientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}-deployer', parameters('serviceName'))), '2023-01-31').clientId]"
+    }
+  }
+}

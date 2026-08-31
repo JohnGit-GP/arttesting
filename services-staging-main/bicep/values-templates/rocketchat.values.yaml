@@ -1,0 +1,45 @@
+# Rocket.Chat — Azure Gov Cloud Values
+
+global:
+  imageRegistry: ${ACR_LOGIN_SERVER}
+
+image:
+  repository: rocketchat/rocket.chat
+  tag: "8.2.0"
+
+host: ${ROCKETCHAT_HOST}
+
+# Disable bundled MongoDB — using self-managed MongoDB 8.0 on AKS
+mongodb:
+  enabled: false
+
+# External MongoDB (replica set required)
+existingMongodbSecret: rocketchat-mongo-secret
+
+# Persistence
+persistence:
+  enabled: true
+  storageClass: managed-csi-premium
+  size: 8Gi
+
+# Disable microservices mode for dev
+microservices:
+  enabled: false
+
+# Admin bootstrap
+extraEnv:
+  - name: ADMIN_USERNAME
+    value: "admin"
+  - name: ADMIN_PASS
+    valueFrom:
+      secretKeyRef:
+        name: rocketchat-admin-secret
+        key: password
+
+# Istio compatibility
+podAnnotations:
+  traffic.sidecar.istio.io/excludeOutboundPorts: "27017"
+
+# Ingress disabled — using Istio
+ingress:
+  enabled: false

@@ -1,0 +1,63 @@
+# Confluence Data Center — Azure Gov Cloud Values
+
+image:
+  repository: ${ACR_LOGIN_SERVER}/atlassian/confluence
+  tag: "10.2.10"
+
+volumes:
+  sharedHome:
+    nfsPermissionFixer:
+      imageRepo: ${ACR_LOGIN_SERVER}/library/alpine
+      imageTag: "3.20"
+    persistentVolumeClaim:
+      create: true
+      storageClassName: azurefile-csi-premium
+      resources:
+        requests:
+          storage: 10Gi
+  localHome:
+    persistentVolumeClaim:
+      create: true
+      storageClassName: managed-csi-premium
+      resources:
+        requests:
+          storage: 10Gi
+
+# External PostgreSQL
+database:
+  type: postgresql
+  url: "jdbc:postgresql://${PG_SERVER_FQDN}:5432/confluencedb?ssl=true&sslmode=require"
+  credentials:
+    secretName: confluence-db-secret
+    usernameSecretKey: username
+    passwordSecretKey: password
+
+# Disable built-in ingress — using Istio
+ingress:
+  create: false
+
+# Istio compatibility — exclude Hazelcast and DB ports
+podAnnotations:
+  traffic.sidecar.istio.io/excludeOutboundPorts: "5701,5432"
+
+# Synchrony (collaborative editing)
+synchrony:
+  enabled: true
+  replicaCount: 1
+
+# Clustering (disabled by default for dev)
+confluence:
+  clustering:
+    enabled: false
+  resources:
+    container:
+      requests:
+        cpu: "2"
+        memory: "2G"
+    jvm:
+      minHeap: "1g"
+      maxHeap: "2g"
+
+# Disable OpenSearch (use built-in Lucene for dev)
+opensearch:
+  enabled: false

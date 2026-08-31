@@ -1,0 +1,182 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-pg-bootstrap
+  labels:
+    app.kubernetes.io/name: jfrog-bootstrap
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    # Helm hook semantics:
+    #   pre-install: runs before any release resource is created (first install)
+    #   pre-upgrade: runs before each `helm upgrade` (re-bootstraps if creds rotated)
+    #   before-hook-creation: deletes the previous Job before creating a new one —
+    #     without this, a previously-failed Job permanently blocks future upgrades
+    #     with "Error: <job> already exists"
+    #   hook-succeeded: deletes the Job after success (failed Jobs remain for inspection)
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+spec:
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jfrog-bootstrap
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        # CRITICAL: must be present. AKS Managed Istio (asm-1-27) auto-injects
+        # an Envoy sidecar via namespace revision label. Envoy never exits when
+        # the main container finishes, so the Job pod runs forever and Helm's
+        # hook timer fires. Per-Pod opt-out overrides namespace-level injection.
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.job.resources | nindent 12 }}
+          env:
+            - name: PG_HOST
+              value: {{ required "postgres.host is required" .Values.postgres.host | quote }}
+            - name: PG_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: PG_SSLMODE
+              value: {{ .Values.postgres.sslmode | quote }}
+            - name: PG_ADMIN_DB
+              value: {{ .Values.postgres.adminDb | quote }}
+            - name: PG_WAIT_TIMEOUT
+              value: {{ .Values.job.pgWaitTimeout | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credsSecret.name }}
+                  key: {{ .Values.credsSecret.adminUserKey }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credsSecret.name }}
+                  key: {{ .Values.credsSecret.adminPasswordKey }}
+            {{- if .Values.databases.artifactory.enabled }}
+            - name: ART_DB
+              value: {{ .Values.databases.artifactory.name | quote }}
+            - name: ART_USER
+              value: {{ .Values.databases.artifactory.user | quote }}
+            - name: ART_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credsSecret.name }}
+                  key: {{ .Values.credsSecret.artifactoryPasswordKey }}
+            {{- end }}
+            {{- if .Values.databases.xray.enabled }}
+            - name: XRAY_DB
+              value: {{ .Values.databases.xray.name | quote }}
+            - name: XRAY_USER
+              value: {{ .Values.databases.xray.user | quote }}
+            - name: XRAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credsSecret.name }}
+                  key: {{ .Values.credsSecret.xrayPasswordKey }}
+            - name: XRAY_EXTENSIONS
+              value: {{ join "," .Values.databases.xray.extensions | quote }}
+            {{- end }}
+            {{- if .Values.databases.distribution.enabled }}
+            - name: DIST_DB
+              value: {{ .Values.databases.distribution.name | quote }}
+            - name: DIST_USER
+              value: {{ .Values.databases.distribution.user | quote }}
+            - name: DIST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credsSecret.name }}
+                  key: {{ .Values.credsSecret.distributionPasswordKey }}
+            {{- end }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              # Escape single quotes for use inside PG '...' literals
+              esc() { printf '%s' "$1" | sed "s/'/''/g"; }
+
+              psql_admin() {
+                psql "host=${PG_HOST} port=${PG_PORT} user=${PGUSER} dbname=${PG_ADMIN_DB} sslmode=${PG_SSLMODE}" \
+                  -v ON_ERROR_STOP=1 "$@"
+              }
+              psql_db() {
+                local db="$1"; shift
+                psql "host=${PG_HOST} port=${PG_PORT} user=${PGUSER} dbname=${db} sslmode=${PG_SSLMODE}" \
+                  -v ON_ERROR_STOP=1 "$@"
+              }
+
+              echo "[wait] Waiting up to ${PG_WAIT_TIMEOUT}s for PG to accept connections..."
+              elapsed=0
+              until psql_admin -c '\q' 2>/dev/null; do
+                if [ "$elapsed" -ge "$PG_WAIT_TIMEOUT" ]; then
+                  echo "ERROR: PG not reachable after ${PG_WAIT_TIMEOUT}s"
+                  exit 1
+                fi
+                sleep 5
+                elapsed=$((elapsed+5))
+              done
+              echo "[wait] PG is reachable."
+
+              ensure_user() {
+                local user="$1"
+                local pw_escaped
+                pw_escaped=$(esc "$2")
+                local user_escaped
+                user_escaped=$(esc "$user")
+                if psql_admin -tAc "SELECT 1 FROM pg_roles WHERE rolname = '${user_escaped}'" | grep -q '^1$'; then
+                  psql_admin -c "ALTER USER \"${user}\" WITH PASSWORD '${pw_escaped}';" >/dev/null
+                else
+                  psql_admin -c "CREATE USER \"${user}\" WITH PASSWORD '${pw_escaped}';" >/dev/null
+                fi
+              }
+
+              ensure_owner_and_grants() {
+                local db="$1"; local user="$2"
+                psql_admin -c "ALTER DATABASE \"${db}\" OWNER TO \"${user}\";" >/dev/null
+                # PG 15+ removed default CREATE on public — must grant explicitly.
+                psql_db "${db}" -c "GRANT ALL ON SCHEMA public TO \"${user}\";" >/dev/null
+              }
+
+              ensure_extensions() {
+                local db="$1"; local exts="$2"
+                # exts is comma-separated; iterate
+                old_ifs="$IFS"; IFS=','
+                # shellcheck disable=SC2086
+                set -- $exts
+                IFS="$old_ifs"
+                for ext in "$@"; do
+                  ext=$(printf '%s' "$ext" | tr -d ' ')
+                  [ -z "$ext" ] && continue
+                  echo "  CREATE EXTENSION IF NOT EXISTS ${ext} in ${db}"
+                  psql_db "${db}" -c "CREATE EXTENSION IF NOT EXISTS \"${ext}\";" >/dev/null
+                done
+              }
+
+              {{- if .Values.databases.artifactory.enabled }}
+              echo "[1/3] Bootstrapping ${ART_USER} / ${ART_DB}..."
+              ensure_user "${ART_USER}" "${ART_PASSWORD}"
+              ensure_owner_and_grants "${ART_DB}" "${ART_USER}"
+              {{- end }}
+
+              {{- if .Values.databases.xray.enabled }}
+              echo "[2/3] Bootstrapping ${XRAY_USER} / ${XRAY_DB}..."
+              ensure_user "${XRAY_USER}" "${XRAY_PASSWORD}"
+              ensure_owner_and_grants "${XRAY_DB}" "${XRAY_USER}"
+              if [ -n "${XRAY_EXTENSIONS}" ]; then
+                ensure_extensions "${XRAY_DB}" "${XRAY_EXTENSIONS}"
+              fi
+              {{- end }}
+
+              {{- if .Values.databases.distribution.enabled }}
+              echo "[3/3] Bootstrapping ${DIST_USER} / ${DIST_DB}..."
+              ensure_user "${DIST_USER}" "${DIST_PASSWORD}"
+              ensure_owner_and_grants "${DIST_DB}" "${DIST_USER}"
+              {{- end }}
+
+              echo "Bootstrap complete."

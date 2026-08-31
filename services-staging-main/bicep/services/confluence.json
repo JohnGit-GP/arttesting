@@ -1,0 +1,45 @@
+{
+  "service": "confluence",
+  "description": "Confluence Data Center",
+
+  "helm": {
+    "repoName": "atlassian-data-center",
+    "repoUrl": "https://atlassian.github.io/data-center-helm-charts",
+    "chartName": "confluence",
+    "chartRef": "atlassian-data-center/confluence",
+    "chartVersion": "2.0.12",
+    "releaseName": "confluence",
+    "namespace": "confluence",
+    "source": "oci"
+  },
+
+  "istioRevision": "asm-1-27",
+
+  "questions": [
+    { "var": "ENABLE_SYNCHRONY", "prompt": "Enable Synchrony (collaborative editing)?", "default": "yes" },
+    { "var": "ENABLE_CLUSTERING", "prompt": "Enable Data Center clustering (multi-node)?", "default": "no" }
+  ],
+
+  "secrets": [
+    { "envVar": "PG_ADMIN_PASSWORD", "prompt": "PostgreSQL admin password", "generate": "prompt", "condition": "always" },
+    { "envVar": "CONFLUENCE_DB_PASSWORD", "prompt": "Confluence DB password", "generate": "prompt", "condition": "always" }
+  ],
+
+  "k8sSecrets": [
+    {
+      "name": "confluence-db-secret",
+      "data": {
+        "username": "confluence",
+        "password": "${CONFLUENCE_DB_PASSWORD}"
+      }
+    }
+  ],
+
+  "externalNameServices": [],
+
+  "argocd": {
+    "project": "services",
+    "syncPolicy": "automated",
+    "namespace": "argocd"
+  }
+}

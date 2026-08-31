@@ -1,0 +1,44 @@
+{
+  "service": "jira",
+  "description": "Jira Data Center",
+
+  "helm": {
+    "repoName": "atlassian-data-center",
+    "repoUrl": "https://atlassian.github.io/data-center-helm-charts",
+    "chartName": "jira",
+    "chartRef": "atlassian-data-center/jira",
+    "chartVersion": "2.0.12",
+    "releaseName": "jira",
+    "namespace": "jira",
+    "source": "oci"
+  },
+
+  "istioRevision": "asm-1-27",
+
+  "questions": [
+    { "var": "ENABLE_CLUSTERING", "prompt": "Enable Data Center clustering (multi-node)?", "default": "no" }
+  ],
+
+  "secrets": [
+    { "envVar": "PG_ADMIN_PASSWORD", "prompt": "PostgreSQL admin password", "generate": "prompt", "condition": "always" },
+    { "envVar": "JIRA_DB_PASSWORD", "prompt": "Jira DB password", "generate": "prompt", "condition": "always" }
+  ],
+
+  "k8sSecrets": [
+    {
+      "name": "jira-db-secret",
+      "data": {
+        "username": "jira",
+        "password": "${JIRA_DB_PASSWORD}"
+      }
+    }
+  ],
+
+  "externalNameServices": [],
+
+  "argocd": {
+    "project": "services",
+    "syncPolicy": "automated",
+    "namespace": "argocd"
+  }
+}

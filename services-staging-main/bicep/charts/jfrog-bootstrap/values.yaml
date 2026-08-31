@@ -1,0 +1,53 @@
+# JFrog PG bootstrap chart values
+# Filled at deploy time by helm-deploy.sh via --set flags.
+
+image:
+  registry: ""        # Required: ACR_LOGIN_SERVER (e.g. myacr.azurecr.us)
+  repository: postgres
+  tag: "16-alpine"
+  pullPolicy: IfNotPresent
+
+postgres:
+  host: ""            # Required: PG_SERVER_FQDN
+  port: 5432
+  sslmode: require
+  # adminDb is the database the admin connects to first (always present on PG Flex)
+  adminDb: postgres
+
+# K8s Secret containing all bootstrap credentials.
+# Created by helm-deploy.sh from KV-sourced env vars.
+credsSecret:
+  name: artifactory-db-creds
+  adminUserKey: db-admin-user
+  adminPasswordKey: db-admin-password
+  artifactoryPasswordKey: db-artifactory-password
+  xrayPasswordKey: db-xray-password
+  distributionPasswordKey: db-distribution-password
+
+# Per-product targets. Names must match Bicep pgDatabaseNames.
+databases:
+  artifactory:
+    enabled: true
+    name: artifactory
+    user: artifactory
+  xray:
+    enabled: true
+    name: xraydb
+    user: xray
+    extensions:
+      - pg_trgm     # Required by Xray ≥ 3.70 — must also be in azure.extensions allowlist
+  distribution:
+    enabled: true
+    name: distribution
+    user: distribution
+
+job:
+  backoffLimit: 3
+  # How long to wait (seconds) for PG to accept connections during cold start
+  pgWaitTimeout: 180
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
